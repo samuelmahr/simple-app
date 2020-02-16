@@ -1,0 +1,12 @@
+---
+NewUser:
+  handler: lambda_functions/new_user.handler
+  name: ${self:service}-new-user-${self:provider.stage}
+  description: Trigger from cognito when a new user is created to save the user to the users table
+  memorySize: 128
+  timeout: 10
+  role:
+    Fn::GetAtt: [NewUserLambdaRole, Arn]
+  environment:
+    USERS_TABLE_NAME:
+      Ref: UsersTable

@@ -1,0 +1,102 @@
+---
+Resources:
+
+  # Cognito Pools
+  UsersCognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      LambdaConfig:
+        PostConfirmation:
+          Fn::GetAtt: [NewUserLambdaFunction, Arn]
+      UserPoolName: ${self:service}-users-${self:provider.stage}
+
+  # DynamoDB Tables
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: email
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableName: ${self:service}-users-${self:provider.stage}
+  UsersHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: N
+      KeySchema:
+        - AttributeName: email
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableName: ${self:service}-users-history-${self:provider.stage}
+
+  # IAM Roles
+  # Lambda
+  NewUserLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Description: Role and Policy to allow lambda to access DynamoDB table
+      Policies:
+        - PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                Resource:
+                  Fn::GetAtt: [UsersTable, Arn]
+              - Effect: Allow
+                Action:
+                  - cloudwatch:*
+                Resource: '*'
+          PolicyName: ${self:service}-new-user-lambda-policy-${self:provider.stage}
+      RoleName: ${self:service}-new-user-lambda-role-${self:provider.stage}
+  UserHistoryLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Description: Role and Policy to allow lambda to access DynamoDB table
+      Policies:
+        - PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                Resource:
+                  Fn::GetAtt: [UsersTable, Arn]
+              - Effect: Allow
+                Action:
+                  - cloudwatch:*
+                Resource: '*'
+          PolicyName: ${self:service}-user-history-lambda-policy-${self:provider.stage}
+      RoleName: ${self:service}-user-history-lambda-role-${self:provider.stage}
